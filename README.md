@@ -16,6 +16,7 @@ project designed to increase knowledge about:
   <li>Fastify plugin ecosystem</li>
   <li>Basic authentication flow</li>
   <li>Generating queries, mutations and subscriptions for the client</li>
+  <li>TypeScript in backend</li>
   </ul>
 
 <h3>Features</h3>

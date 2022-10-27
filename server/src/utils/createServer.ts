@@ -13,6 +13,7 @@ import fastifyCors from "@fastify/cors";
 import fastifyCookie from "@fastify/cookie";
 import fastifyJwt from "@fastify/jwt";
 import UserResolver from "../modules/user/user.resolver";
+import { User } from "../modules/user/user.dto";
 
 const app = fastify();
 
@@ -59,6 +60,8 @@ const fastifyAppClosePlugin = (app: FastifyInstance): ApolloServerPlugin => {
   };
 };
 
+type CtxUser = Omit<User, "password">;
+
 const buildContext = async ({
   request,
   reply,
@@ -67,29 +70,28 @@ const buildContext = async ({
   request?: FastifyRequest;
   reply?: FastifyReply;
   connectionParams?: {
-    Authorization: string
+    Authorization: string;
   };
 }) => {
-
-if(connectionParams || !request) {
+  if (connectionParams || !request) {
     try {
-        return {
-            user: await app.jwt.verify(connectionParams?.Authorization || '')
-        }
+      return {
+        user: await app.jwt.verify<CtxUser>(connectionParams?.Authorization || ""),
+      };
     } catch (error) {
-        return { user: null}
+      return { user: null };
     }
-}
+  }
 
   try {
-    const user = await request?.jwtVerify();
+    const user = await request?.jwtVerify<CtxUser>();
     return { request, reply, user };
   } catch (error) {
     return { request, reply, user: null };
   }
 };
 
-export type Context = Awaited<ReturnType<typeof buildContext>>
+export type Context = Awaited<ReturnType<typeof buildContext>>;
 
 export const createServer = async () => {
   const schema = await buildSchema({
