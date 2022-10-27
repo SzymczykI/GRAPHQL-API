@@ -1,11 +1,13 @@
 import { ApolloError } from "apollo-server-core";
 import {
   Arg,
+  Authorized,
   Ctx,
   FieldResolver,
   Mutation,
   Query,
   Resolver,
+  Root,
 } from "type-graphql";
 import { Context } from "../../utils/createServer";
 import {
@@ -18,9 +20,11 @@ import {
 import {
   createUser,
   findUserByEmailOrUsername,
+  findUserFollowedBy,
   findUserFollowing,
   findUsers,
   followUser,
+  unfollowUser,
   verifyPassword,
 } from "./user.service";
 
@@ -37,11 +41,13 @@ class UserResolver {
     }
   }
 
+  @Authorized()
   @Query(() => User)
   me(@Ctx() context: Context) {
     return context.user;
   }
 
+  @Authorized()
   @Mutation(() => String)
   async login(@Arg("input") input: LoginInput, @Ctx() context: Context) {
     const user = await findUserByEmailOrUsername(
@@ -83,6 +89,7 @@ class UserResolver {
     return findUsers();
   }
 
+  @Authorized()
   @Mutation(() => User)
   async followUser(
     @Arg("input") input: FollowUserInput,
@@ -96,17 +103,29 @@ class UserResolver {
     }
   }
 
+  @Authorized()
+  @Mutation(() => User)
+  async unfollowUser(
+    @Arg("input") input: FollowUserInput,
+    @Ctx() context: Context
+  ) {
+    const result = await unfollowUser({ ...input, userId: context.user?.id! });
+    return result;
+  }
+
   @FieldResolver(() => UserFollowers)
-  followers() {
+  async followers(@Root() user: User) {
+    const data = await findUserFollowedBy(user.id);
+
     return {
-      count: 0,
-      items: [],
+      count: data?.followedBy.length,
+      items: data?.followedBy,
     };
   }
 
   @FieldResolver(() => UserFollowers)
-  async following(@Ctx() context: Context) {
-    const data = await findUserFollowing(context.user?.id!);
+  async following(@Root() user: User) {
+    const data = await findUserFollowing(user.id);
 
     return {
       count: data?.following.length,

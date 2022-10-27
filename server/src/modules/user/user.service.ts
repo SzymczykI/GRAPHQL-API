@@ -58,6 +58,27 @@ export const followUser = async ({
   });
 };
 
+export const unfollowUser = async ({
+  userId,
+  username,
+}: {
+  userId: string;
+  username: string;
+}) => {
+  return prisma.user.update({
+    where: {
+      id: userId,
+    },
+    data: {
+      following: {
+        disconnect: {
+          username,
+        },
+      },
+    },
+  });
+};
+
 export const findUsers = async () => {
   return prisma.user.findMany();
 };
@@ -68,7 +89,26 @@ export const findUserFollowing = async (userId: string) => {
       id: userId,
     },
     include: {
-      following: true
-    }
+      following: true,
+    },
+  });
+};
+
+export const findUserFollowedBy = async (userId: string) => {
+  return prisma.user.findUnique({
+    where: {
+      id: userId,
+    },
+    include: {
+      followedBy: true,
+    },
+  });
+};
+
+export const findUserById = async (userId: string) => {
+  return prisma.user.findFirst({
+    where: {
+      id: userId,
+    },
   });
 };

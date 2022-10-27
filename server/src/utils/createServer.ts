@@ -14,6 +14,8 @@ import fastifyCookie from "@fastify/cookie";
 import fastifyJwt from "@fastify/jwt";
 import UserResolver from "../modules/user/user.resolver";
 import { User } from "../modules/user/user.dto";
+import { authChecker } from "./authChecker";
+import MessageResolver from "../modules/message/message.resolver";
 
 const app = fastify();
 
@@ -76,7 +78,9 @@ const buildContext = async ({
   if (connectionParams || !request) {
     try {
       return {
-        user: await app.jwt.verify<CtxUser>(connectionParams?.Authorization || ""),
+        user: await app.jwt.verify<CtxUser>(
+          connectionParams?.Authorization || ""
+        ),
       };
     } catch (error) {
       return { user: null };
@@ -95,7 +99,8 @@ export type Context = Awaited<ReturnType<typeof buildContext>>;
 
 export const createServer = async () => {
   const schema = await buildSchema({
-    resolvers: [UserResolver],
+    resolvers: [UserResolver, MessageResolver],
+    authChecker: authChecker,
   });
 
   const server = new ApolloServer({
@@ -107,6 +112,8 @@ export const createServer = async () => {
     context: buildContext,
   });
 
+  subscriptionServer({ schema, server: app.server });
+
   return { app, server };
 };
 
@@ -115,14 +122,14 @@ const subscriptionServer = ({
   server,
 }: {
   schema: GraphQLSchema;
-  server: ApolloServer;
+  server: typeof app.server;
 }) => {
   return SubscriptionServer.create(
     {
       schema,
       execute,
       subscribe,
-      async onConnect(connectionParams: Object) {
+      async onConnect(connectionParams: { Authorization: string }) {
         return buildContext({ connectionParams });
       },
     },
